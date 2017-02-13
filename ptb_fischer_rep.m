@@ -13,7 +13,7 @@ function PTB_Fischer()
 
 edfFile='demo.edf';
 
-codeVersion = '1.0';
+codeVersion = '0.8';
 
 % --- DO NOT CHANGE -- %
 skipVercheck = 0; % 1 = check matlab and octave versions
@@ -396,7 +396,7 @@ try
     
     
     while t < length(trialStruct) + 1 %% comment for debugging
-   % while t < 2 %length(trialStruct) + 1 %% comment for debugging
+   % while t < 2 %length(trialStruct) + 1 %% uncomment for debugging
         
         if devMode == 1
             t = length(trialStruct);
@@ -530,7 +530,7 @@ try
         dotSize = fixationDiameterPix;
         fixationDot = [-dotSize -dotSize dotSize dotSize];
         fixationDot = CenterRect(fixationDot, windowRect);
-        fixWinSize = round(params.pixPerDegWidth);
+        fixWinSize = round(params.pixPerDegWidth)/2;
         fixationWindow = [-fixWinSize -fixWinSize fixWinSize fixWinSize];
         fixationWindow = CenterRect(fixationWindow, windowRect);
         
