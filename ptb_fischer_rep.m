@@ -6,14 +6,14 @@ function PTB_Fischer()
             my > fixationWindow(2) && my < fixationWindow(4) ;
     end
 
+global eyeTrackingStruct
+
+eyeTrackingStruct = struct;
+eyeTrackingStruct(1).fixationBreaks = {};
 
 
-    
 
-
-edfFile='demo.edf';
-
-codeVersion = '0.8';
+codeVersion = '1.0';
 
 % --- DO NOT CHANGE -- %
 skipVercheck = 0; % 1 = check matlab and octave versions
@@ -94,7 +94,7 @@ end
 
 
 
-if devMode == 1
+if devMode == 0
     warning('Development mode is ON! Turn it off unless you know what you are doing')
     warning('press q to end the experiment early')
 end
@@ -158,6 +158,9 @@ try
     end
     
     subCode = input('What is the subject code? ','s');
+    edfFile = ['current.edf'];
+   
+    
     
     KbName('UnifyKeyNames')
     
@@ -283,6 +286,9 @@ try
     Screen('BlendFunction', window, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');
     [screenXpixels, screenYpixels] = Screen('WindowSize', window);
     
+    % save screenXpixels and screenXpixels
+    
+    
     if screenXpixels < 1024 && screenYpixels < 768
         error('Your screen is very small. The text may not display correctly. Either make the adjustments yourself, or email lincoln@colling.net.nz for help')
     end
@@ -353,9 +359,6 @@ try
     end
     
     
-    Eyelink('Openfile', edfFile);
-    
-    Eyelink('command', 'add_file_preamble_text ''Recorded by EyelinkToolbox demo-experiment''');
     
     % This command is crucial to map the gaze positions from the tracker to
     % screen pixel positions to determine fixation
@@ -385,22 +388,23 @@ try
     
     % open file to record data to
     
+
     
     Eyelink('command', 'button_function 5 "accept_target_fixation"');
     
     EyelinkDoTrackerSetup(el);
     
     
-
+    Eyelink('Openfile', edfFile);
+    Eyelink('StartRecording');
+    % record a few samples before we actually start displaying
+    WaitSecs(0.1);
+    % mark zero-plot time in data file
+    Eyelink('Message', 'SYNCTIME')
     
-    
-    
+  
     while t < length(trialStruct) + 1 %% comment for debugging
-   % while t < 2 %length(trialStruct) + 1 %% uncomment for debugging
-        
-        if devMode == 1
-            t = length(trialStruct);
-        end
+
         
         thekey = '';
         
@@ -435,6 +439,14 @@ try
             
             
             % ---- %
+            % Do the eye tracker calibration here
+            
+            Eyelink('command', 'button_function 5 "accept_target_fixation"');
+            EyelinkDoTrackerSetup(el);
+            
+            %
+            
+            
         end
         
         
@@ -513,53 +525,12 @@ try
         
         penWidthPixels = 2;
         fixationDiameterPix = round(params.pixPerDegWidth * fixationDiameterDeg);
-        % % show the fixation for set period
-        % Draw the rect to the screen
-        Screen('FrameRect', window, allColors, allRects,penWidthPixels);
-        
-        %% draw the fixation
-        Screen('DrawDots', window, [xCenter; yCenter], fixationDiameterPix, white, [], 2);
-        
-        Priority(topPriorityLevel);
-        vbl = Screen('Flip', window);
-        % now keep the fixation on for 'initDisplay' ms
-        
-        
-        % perform the fixation check
-        fixationTimeCheck = .5
-        dotSize = fixationDiameterPix;
-        fixationDot = [-dotSize -dotSize dotSize dotSize];
-        fixationDot = CenterRect(fixationDot, windowRect);
-        fixWinSize = round(params.pixPerDegWidth)/2;
+        fixWinSize = round(params.pixPerDegWidth/2);
         fixationWindow = [-fixWinSize -fixWinSize fixWinSize fixWinSize];
         fixationWindow = CenterRect(fixationWindow, windowRect);
         
-        
-        % Check that there is fixation on the point for FixationTimeCheck seconds
-        
-        Eyelink('Message', 'TRIALID %d', t);
-        Eyelink('command', 'record_status_message "TRIAL %d/%d"', t,length(trialStruct));
-        Eyelink('Command', 'set_idle_mode');
-        
-        
-        Eyelink('Command', 'clear_screen %d', 0);
-        % draw fixation and fixation window shapes on host PC
-        Eyelink('command', 'draw_cross %d %d 15', xCenter,yCenter);
-        Eyelink('command', 'draw_box %d %d %d %d 15', fixationWindow(1), fixationWindow(2), fixationWindow(3), fixationWindow(4));
-        
-        Eyelink('Command', 'set_idle_mode');
-        WaitSecs(0.05);
-        Eyelink('StartRecording');
-        eye_used = Eyelink('EyeAvailable'); % get eye that's tracked
-        if eye_used == 2
-            eye_used = 1; % use the right_eye data
-        end
-        
-        Eyelink('Message', 'SYNCTIME');
-        
-        fixateTime = GetSecs +  round(650 + (1500-650).*rand)/1000 + 200/1000;
-        graceTime = GetSecs + 500/1000; % how long can they break fixation
-        % during the fixate time
+        drawInitDisplay
+       % during the fixate time
         
         ListenChar(0)
         MustAchieveFixationWithin = 2; %seconds
@@ -571,7 +542,7 @@ try
         StartFixationCheck = GetSecs;
         Proceed = 0;
         while Proceed == 0
-            while  EndFixation == 0 
+            while  EndFixation == 0
                 disp('repeat')
                 if abs(StartFixationCheck - GetSecs) >  MustAchieveFixationWithin %&& abs(FixationCounterStart - NowTime) < MustAcheiveStableFixationFor
                     EndFixation = 1;
@@ -619,6 +590,8 @@ try
                     
                     FixationCounterStart = GetSecs;
                     
+                    
+                    
                     %Screen('Flip',window);
                     disp('broke fix');
                     Eyelink('Message', 'Fixation broke or grace time ended');
@@ -634,6 +607,11 @@ try
                 %Screen('flip')
                 Eyelink('command', 'button_function 5 "accept_target_fixation"');
                 EyelinkDoTrackerSetup(el);
+                WaitSecs(0.05); % small pause
+                FixationCounterStart = GetSecs;
+                StartFixationCheck = GetSecs;
+                EndFixation = 0;
+                drawInitDisplay;
                 
             else
                 Proceed = 1;
@@ -649,7 +627,9 @@ try
         KbQueueStart(device);
         if early == 0
             for frame = 1 : (initDisplayFrames - 1)
-                fixOkay('initDisplay')
+                timepoint = 'initDisplay'
+                eyeTrackingStruct = fixOkay(timepoint,frame, eyeTrackingStruct,t);
+                
                 [early,firstPress] = KbQueueCheck(device);
                 Screen('DrawDots', window, [xCenter; yCenter], fixationDiameterPix, fixationColor, [], 2);
                 Screen('FrameRect', window, allColors, allRects,penWidthPixels);
@@ -669,7 +649,9 @@ try
         digitOnTime = GetSecs;
         if early == 0
             for frame = 1 : digitDisplayFrames - 1
-                fixOkay('digit display')
+                timepoint = 'digitDisplay';
+                eyeTrackingStruct = fixOkay(timepoint,frame, eyeTrackingStruct,t);
+                
                 [early, firstPress] = KbQueueCheck(device);
                 if early == 1
                     break;
@@ -690,7 +672,8 @@ try
         
         if early == 0
             for frame = 1 : delayFrames - 1
-                fixOkay('variable delay')
+                timepoint = 'variableDelay';
+                eyeTrackingStruct = fixOkay(timepoint,frame, eyeTrackingStruct,t);
                 [early, firstPress] = KbQueueCheck(device);
                 Screen('DrawDots', window, [xCenter; yCenter], fixationDiameterPix, fixationColor, [], 2);
                 Screen('FrameRect', window, allColors, allRects,penWidthPixels);
@@ -834,8 +817,16 @@ try
         clear early
         KbQueueStop(device);
         KbQueueFlush(device);
-        
+       
+     Eyelink('StopRecording')
     end
+    
+  
+    WaitSecs(0.5);
+    Eyelink('StopRecording')
+   % download data file
+    status = Eyelink('ReceiveFile',edfFile)
+    copyfile('current.edf',[subCode '_eyetracking.edf'])
     
     trialsEnd = now;
     % present a blank screen
@@ -886,8 +877,13 @@ try
     age = input('What is your age? ');
     
     
+    params.xCenter = xCenter;
+    params.yCenter = yCenter;
+    params.screenXpixels = screenXpixels;
+    params.screenYpixels = screenYpixels;
+     
     save(subjectDataFile,'responseStruct','trialStruct','timings','params','handed','lang','age','systemParams',...
-        'mathTestScore','mathTestReponse','aMAS','-mat');
+        'mathTestScore','mathTestReponse','aMAS','eyeTrackingStruct','-mat');
 catch ME
     sca;
     ListenChar(0); %makes it so characters typed do show up in the command window
@@ -916,7 +912,12 @@ end
 
 % The following are a series of helper functions
 
-    function fixOkay(timepoint, trialStruct,t)
+    function eyeTrackingStruct = fixOkay(timepoint,framepoint, eyeTrackingStruct,t)
+        
+        
+        if length(eyeTrackingStruct) < t
+            eyeTrackingStruct(t).fixationBreaks = {};
+        end
         
         evt = Eyelink('NewestFloatSample');
         
@@ -924,13 +925,25 @@ end
         my = evt.gy(eye_used + 1);
         if ~infixationWindow(mx,my)
             disp(['mark trial as broken fixation at ' timepoint])
+                       
+          %  try
+            eyeTrackingStruct(t).fixationBreaks = vertcat(eyeTrackingStruct(t).fixationBreaks,...
+                {timepoint,framepoint, mx, my});
+          %  catch
+          %  eyeTrackingStruct(t).fixationBreaks = {timepoint,framepoint, mx, my};
+          %  end
             
         end
+        
+        
+        
+        
+        
     end
 
 
 
-function screenparams
+    function screenparams
         [xCenter, yCenter] = RectCenter(windowRect);
         % paramater
         fixationColor = white;  % parameter
@@ -995,6 +1008,52 @@ function screenparams
         
         Screen('Flip', window);
         presstogo
+    end
+
+    function drawInitDisplay
+        % % show the fixation for set period
+        % Draw the rect to the screen
+        Screen('FrameRect', window, allColors, allRects,penWidthPixels);
+        
+        %% draw the fixation
+        Screen('DrawDots', window, [xCenter; yCenter], fixationDiameterPix, white, [], 2);
+        
+        Priority(topPriorityLevel);
+        vbl = Screen('Flip', window);
+        % now keep the fixation on for 'initDisplay' ms
+        
+        
+        % perform the fixation check
+        fixationTimeCheck = .5
+        dotSize = fixationDiameterPix;
+        fixationDot = [-dotSize -dotSize dotSize dotSize];
+        fixationDot = CenterRect(fixationDot, windowRect);
+        fixWinSize = round(params.pixPerDegWidth);
+        fixationWindow = [-fixWinSize -fixWinSize fixWinSize fixWinSize];
+        fixationWindow = CenterRect(fixationWindow, windowRect);
+        
+        
+        % Check that there is fixation on the point for FixationTimeCheck seconds
+        
+        Eyelink('Message', 'TRIALID %d', t);
+        Eyelink('command', 'record_status_message "TRIAL %d/%d"', t,length(trialStruct));
+        %Eyelink('Command', 'set_idle_mode');
+        
+        
+        Eyelink('Command', 'clear_screen %d', 0);
+        % draw fixation and fixation window shapes on host PC
+        Eyelink('command', 'draw_cross %d %d 15', xCenter,yCenter);
+        Eyelink('command', 'draw_box %d %d %d %d 15', fixationWindow(1), fixationWindow(2), fixationWindow(3), fixationWindow(4));
+        
+       % Eyelink('Command', 'set_idle_mode');
+        WaitSecs(0.05);
+       Eyelink('StartRecording');
+        eye_used = Eyelink('EyeAvailable'); % get eye that's tracked
+        if eye_used == 2
+            eye_used = 1; % use the right_eye data
+        end
+        
+        Eyelink('Message', 'SYNCTIME');
     end
 
 
@@ -1180,11 +1239,11 @@ function screenparams
         
         
     end
-    
 
 
-    
-    
+
+
+
 %%% change language details.
     function lang = getLanguageDetails
         clc
