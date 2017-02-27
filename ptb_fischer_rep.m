@@ -1,4 +1,4 @@
-function PTB_Fischer()
+function ptb_fischer_rep()
 
     function fix = infixationWindow(mx,my)
         % determine if gx and gy are within fixation window
