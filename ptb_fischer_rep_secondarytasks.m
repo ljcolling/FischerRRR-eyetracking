@@ -5,8 +5,8 @@ function ptb_fischer_rep_secondarytasks()
 codeVersion = '1.0';
 
 % --- DO NOT CHANGE -- %
-skipVercheck = 0; % 1 = check matlab and octave versions
-skipSyncTests = 1; % 1 = skip video sync tests. ALWAYS set to 0
+skipVercheck = 1; % 1 = check matlab and octave versions
+skipSyncTests = 0; % 1 = skip video sync tests. ALWAYS set to 0
 devMode = 0; % set development flag
 % --- END --- %
 
@@ -46,6 +46,9 @@ systemParams.systemType = computer;
 if ismac
     [~, OSversion] = system('sw_vers');
 end
+if isunix
+  [~, OSversion] = system('uname -rov');
+end
 
 try
     if ispc
@@ -57,7 +60,7 @@ end
 
 systemParams.OSversion = OSversion;
 
-if isMatlab == 1 && isOctave == 1 || isMatlab == 0 && isOctave == 0n
+if isMatlab == 1 && isOctave == 1 || isMatlab == 0 && isOctave == 0
     error('Can not determine whether you are using matlab or octave')
 end
 
@@ -558,7 +561,10 @@ end
         if ismac
             [~, OSversion] = system('sw_vers');
         end
-        
+        if isunix
+            [~, OSversion] = system('uname -rov');
+        end
+
         try
             if ispc
                 [~, OSversion] = system('ver');
@@ -755,21 +761,21 @@ end
             '17 - 9';...
             '89 - 18';...
             '5 x 3';...
-            '8 ÷ 2';...
+            '8 Ã· 2';...
             '8 x 5';...
             '13 x 7';...
             '48 - 19';...
             '14 x 6';...
             '2/3 - 1/3';...
-            '126 ÷ 42';...
-            '288 ÷ 48';...
+            '126 Ã· 42';...
+            '288 Ã· 48';...
             '7/8 - 2/8';...
             '3250 / 25';...
             '2 3/4 + 4 1/8';...
             '1.05 x 0.2';...
             '-18 + 12';...
             '-6 x 7';...
-            '4/7 ÷ 1/2'};
+            '4/7 Ã· 1/2'};
         
         level = reshape(ones(5,5) .* repmat([1 2 3 4 5],5,1),1,25);
         incorrectByLevel = zeros(5,1);
@@ -963,7 +969,7 @@ end
                 vbl  = Screen('Flip', window, vbl + (waitframes - 0.5) * ifi);
                 
                 
-                if timeRemaining == 0
+                if timeRemaining <= 0
                     correct(q,1) = 0;
                     incorrectByLevel(level(q),1) = incorrectByLevel(level(q),1) + 1;
                     thisResponse = [opts1 opts2 opts3 opts4];
@@ -972,7 +978,7 @@ end
                     opts3 = 0;
                     opts2= 0;
                     opts4 = 0;
-                    clear buttons
+                    buttons = 0;
                     
                     
                 end
