@@ -578,7 +578,7 @@ try
                 if infixationWindow(mx,my) %&& ~infix
                     
                     Eyelink('Message', 'Fixation Start');
-                    Beeper(el.calibration_success_beep(1), el.calibration_success_beep(2), el.calibration_success_beep(3));
+                    %Beeper(el.calibration_success_beep(1), el.calibration_success_beep(2), el.calibration_success_beep(3));
                     
                     NowTime = GetSecs;
                     if abs(FixationCounterStart - NowTime) > MustAcheiveStableFixationFor
@@ -598,7 +598,7 @@ try
                     %Screen('Flip',window);
                     disp('broke fix');
                     Eyelink('Message', 'Fixation broke or grace time ended');
-                    Beeper(el.calibration_failed_beep(1), el.calibration_failed_beep(2), el.calibration_failed_beep(3));
+                    %Beeper(el.calibration_failed_beep(1), el.calibration_failed_beep(2), el.calibration_failed_beep(3));
                     infix = 0;
                     
                 end
